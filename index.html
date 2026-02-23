@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Harmony Clicker: Arcade Edition</title>
+    <style>
+        body { margin: 0; background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
+        #game-container { display: flex; gap: 40px; background: #222; padding: 30px; border-radius: 20px; border: 2px solid #d4af37; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        
+        /* Left Side: Clicking */
+        #click-section { text-align: center; width: 300px; }
+        #note-btn { font-size: 80px; background: none; border: none; cursor: pointer; transition: 0.1s; user-select: none; }
+        #note-btn:active { transform: scale(0.9); }
+        #harmony-display { font-size: 32px; color: #d4af37; font-weight: bold; margin: 20px 0; }
+        
+        /* Right Side: Upgrades */
+        #upgrade-section { width: 300px; display: flex; flex-direction: column; gap: 10px; }
+        .upgrade { background: #333; border: 1px solid #444; padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .upgrade:hover { background: #444; border-color: #d4af37; }
+        .upgrade.locked { opacity: 0.5; cursor: not-allowed; }
+        .upgrade h4 { margin: 0; color: #00ffff; }
+        .upgrade p { margin: 5px 0 0 0; font-size: 12px; color: #bbb; }
+
+        /* Sponsor Hub Button */
+        #hub-trigger { position: absolute; bottom: 20px; right: 20px; background: #ff0000; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; border: none; }
+        
+        #modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #000; padding: 30px; border: 3px solid #d4af37; border-radius: 15px; text-align: center; display: none; z-index: 100; }
+        .btn { display: block; width: 100%; padding: 12px; margin: 10px 0; font-weight: bold; text-decoration: none; border-radius: 5px; color: white; }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="click-section">
+            <div id="harmony-display">0 Harmony</div>
+            <button id="note-btn">🎵</button>
+            <p style="color: #888;">Click the note to create music!</p>
+            <p id="hps-display">0 Harmony / sec</p>
+        </div>
+
+        <div id="upgrade-section">
+            <div class="upgrade" onclick="buyUpgrade(0)">
+                <h4>Flute Player</h4>
+                <p>Cost: <span id="cost0">15</span> | +1 Harmony/sec</p>
+            </div>
+            <div class="upgrade" onclick="buyUpgrade(1)">
+                <h4>Trumpet Section</h4>
+                <p>Cost: <span id="cost1">100</span> | +5 Harmony/sec</p>
+            </div>
+            <div class="upgrade" onclick="buyUpgrade(2)">
+                <h4>ESOFA Orchestra</h4>
+                <p>Cost: <span id="cost2">500</span> | +20 Harmony/sec</p>
+            </div>
+        </div>
+    </div>
+
+    <button id="hub-trigger" onclick="showModal()">SPONSOR HUB</button>
+
+    <div id="modal">
+        <h2 style="color:#d4af37;">MASTER MUSICIAN!</h2>
+        <p>You've created a symphony. Support the real pros:</p>
+        <a class="btn" style="background:#ff0000;" href="https://www.youtube.com/@SancoOutdoors" target="_blank">🎬 SUB TO SANCO</a>
+        <a class="btn" style="background:#d4af37; color:black;" href="https://www.sanangelogives.org/organization/emmanuelschooloffinearts" target="_blank">🎻 TIP THE SCHOOL</a>
+        <button onclick="hideModal()" style="background:none; border:none; color:#555; cursor:pointer; margin-top:10px;">[ BACK TO CLICKING ]</button>
+    </div>
+
+    <script>
+        let harmony = 0;
+        let hps = 0;
+        let upgrades = [
+            { name: "Flute", cost: 15, power: 1, count: 0 },
+            { name: "Trumpet", cost: 100, power: 5, count: 0 },
+            { name: "Orchestra", cost: 500, power: 20, count: 0 }
+        ];
+
+        const noteBtn = document.getElementById('note-btn');
+        const harmonyDisplay = document.getElementById('harmony-display');
+        const hpsDisplay = document.getElementById('hps-display');
+
+        noteBtn.onclick = () => {
+            harmony++;
+            updateDisplay();
+        };
+
+        function buyUpgrade(idx) {
+            if (harmony >= upgrades[idx].cost) {
+                harmony -= upgrades[idx].cost;
+                upgrades[idx].count++;
+                upgrades[idx].cost = Math.floor(upgrades[idx].cost * 1.15);
+                calculateHPS();
+                updateDisplay();
+            }
+        }
+
+        function calculateHPS() {
+            hps = upgrades.reduce((total, u) => total + (u.count * u.power), 0);
+            hpsDisplay.innerText = `${hps} Harmony / sec`;
+        }
+
+        function updateDisplay() {
+            harmonyDisplay.innerText = `${Math.floor(harmony)} Harmony`;
+            document.getElementById('cost0').innerText = upgrades[0].cost;
+            document.getElementById('cost1').innerText = upgrades[1].cost;
+            document.getElementById('cost2').innerText = upgrades[2].cost;
+        }
+
+        function showModal() { document.getElementById('modal').style.display = 'block'; }
+        function hideModal() { document.getElementById('modal').style.display = 'none'; }
+
+        setInterval(() => {
+            harmony += hps / 10;
+            updateDisplay();
+        }, 100);
+    </script>
+</body>
+</html>
