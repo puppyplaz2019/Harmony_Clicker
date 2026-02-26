@@ -5,39 +5,41 @@
     <title>Harmony Clicker: Arcade Edition</title>
     <style>
         body { margin: 0; background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
-        #game-container { display: flex; gap: 40px; background: #222; padding: 30px; border-radius: 20px; border: 2px solid #d4af37; box-shadow: 0 0 30px rgba(0,0,0,0.5); }
+        #game-container { display: flex; gap: 40px; background: #222; padding: 30px; border-radius: 20px; border: 2px solid #d4af37; box-shadow: 0 0 30px rgba(0,0,0,0.5); position: relative; }
         
-        /* Left Side: Clicking */
         #click-section { text-align: center; width: 300px; }
         #note-btn { font-size: 80px; background: none; border: none; cursor: pointer; transition: 0.1s; user-select: none; }
         #note-btn:active { transform: scale(0.9); }
         #harmony-display { font-size: 32px; color: #d4af37; font-weight: bold; margin: 20px 0; }
         
-        /* Right Side: Upgrades */
-        #upgrade-section { width: 300px; display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; padding-right: 5px; }
+        #upgrade-section { width: 300px; display: flex; flex-direction: column; gap: 10px; }
         .upgrade { background: #333; border: 1px solid #444; padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
         .upgrade:hover { background: #444; border-color: #d4af37; }
-        .upgrade.disabled { opacity: 0.5; cursor: not-allowed; }
         .upgrade h4 { margin: 0; color: #00ffff; }
         .upgrade p { margin: 5px 0 0 0; font-size: 12px; color: #bbb; }
 
-        /* Sponsor Hub Button */
+        /* Golden Note Styling */
+        #golden-note { 
+            position: absolute; font-size: 50px; cursor: pointer; display: none; 
+            z-index: 100; filter: drop-shadow(0 0 15px gold); animation: pulse 1s infinite;
+        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+
         #hub-trigger { position: absolute; bottom: 20px; right: 20px; background: #ff0000; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; border: none; }
         #back-trigger { position: absolute; top: 20px; left: 20px; background: #444; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 14px; }
-        
-        #modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #000; padding: 30px; border: 3px solid #d4af37; border-radius: 15px; text-align: center; display: none; z-index: 100; }
+        #modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #000; padding: 30px; border: 3px solid #d4af37; border-radius: 15px; text-align: center; display: none; z-index: 1000; }
         .btn { display: block; width: 100%; padding: 12px; margin: 10px 0; font-weight: bold; text-decoration: none; border-radius: 5px; color: white; }
     </style>
 </head>
 <body>
 
     <a id="back-trigger" href="https://puppyplaz2019.github.io/Arcade-HUB/">← BACK TO HUB</a>
+    <div id="golden-note" onclick="hitGoldenNote()">✨🎵</div>
 
     <div id="game-container">
         <div id="click-section">
             <div id="harmony-display">0 Harmony</div>
             <button id="note-btn">🎵</button>
-            <p style="color: #888;">Create music to earn Notes!</p>
             <p id="hps-display">0 Harmony / sec</p>
             <p id="hpc-display" style="font-size: 12px; color: #d4af37;">+1 Per Click</p>
         </div>
@@ -66,41 +68,37 @@
 
     <div id="modal">
         <h2 style="color:#d4af37;">MASTER MUSICIAN!</h2>
-        <p>You've created a symphony. Support the real pros:</p>
+        <p>Support the real pros:</p>
         <a class="btn" style="background:#ff0000;" href="https://www.youtube.com/@SancoOutdoors" target="_blank">🎬 SUB TO SANCO</a>
         <a class="btn" style="background:#d4af37; color:black;" href="https://www.sanangelogives.org/organization/emmanuelschooloffinearts" target="_blank">🎻 TIP THE SCHOOL</a>
-        <button onclick="hideModal()" style="background:none; border:none; color:#555; cursor:pointer; margin-top:10px;">[ BACK TO CLICKING ]</button>
+        <button onclick="hideModal()" style="background:none; border:none; color:#555; cursor:pointer; margin-top:10px;">[ BACK ]</button>
     </div>
 
     <script>
-        // Use the same key as the Garden Game
         let harmony = parseInt(localStorage.getItem('notes_collected') || 0);
         let clickPower = parseInt(localStorage.getItem('click_power') || 1);
         let clickCost = parseInt(localStorage.getItem('click_cost') || 25);
         
+        // Use fixed price increases instead of multiplication
         let upgrades = JSON.parse(localStorage.getItem('clicker_upgrades')) || [
-            { name: "Flute", cost: 15, power: 1, count: 0 },
-            { name: "Trumpet", cost: 100, power: 5, count: 0 },
-            { name: "Orchestra", cost: 500, power: 20, count: 0 }
+            { name: "Flute", cost: 15, power: 1, count: 0, increase: 10 },
+            { name: "Trumpet", cost: 100, power: 5, count: 0, increase: 50 },
+            { name: "Orchestra", cost: 500, power: 20, count: 0, increase: 200 }
         ];
 
         let hps = 0;
-        const noteBtn = document.getElementById('note-btn');
-        const harmonyDisplay = document.getElementById('harmony-display');
-        const hpsDisplay = document.getElementById('hps-display');
-        const hpcDisplay = document.getElementById('hpc-display');
+        const goldenNote = document.getElementById('golden-note');
 
-        noteBtn.onclick = () => {
+        document.getElementById('note-btn').onclick = () => {
             harmony += clickPower;
             updateDisplay();
-            saveGame();
         };
 
         function buyClickUpgrade() {
             if (harmony >= clickCost) {
                 harmony -= clickCost;
                 clickPower++;
-                clickCost = Math.floor(clickCost * 1.5);
+                clickCost += 25; // Simple flat increase
                 updateDisplay();
                 saveGame();
             }
@@ -110,7 +108,7 @@
             if (harmony >= upgrades[idx].cost) {
                 harmony -= upgrades[idx].cost;
                 upgrades[idx].count++;
-                upgrades[idx].cost = Math.floor(upgrades[idx].cost * 1.15);
+                upgrades[idx].cost += upgrades[idx].increase; // Simple flat increase
                 calculateHPS();
                 updateDisplay();
                 saveGame();
@@ -119,16 +117,35 @@
 
         function calculateHPS() {
             hps = upgrades.reduce((total, u) => total + (u.count * u.power), 0);
-            hpsDisplay.innerText = `${hps} Harmony / sec`;
+            document.getElementById('hps-display').innerText = `${hps} Harmony / sec`;
         }
 
         function updateDisplay() {
-            harmonyDisplay.innerText = `${Math.floor(harmony)} Harmony`;
-            hpcDisplay.innerText = `+${clickPower} Per Click`;
+            document.getElementById('harmony-display').innerText = `${Math.floor(harmony)} Harmony`;
+            document.getElementById('hpc-display').innerText = `+${clickPower} Per Click`;
             document.getElementById('click-cost').innerText = clickCost;
             document.getElementById('cost0').innerText = upgrades[0].cost;
             document.getElementById('cost1').innerText = upgrades[1].cost;
             document.getElementById('cost2').innerText = upgrades[2].cost;
+        }
+
+        // Golden Note Logic
+        function spawnGoldenNote() {
+            const x = Math.random() * (window.innerWidth - 100);
+            const y = Math.random() * (window.innerHeight - 100);
+            goldenNote.style.left = x + 'px';
+            goldenNote.style.top = y + 'px';
+            goldenNote.style.display = 'block';
+            setTimeout(() => { goldenNote.style.display = 'none'; }, 5000);
+        }
+
+        function hitGoldenNote() {
+            const bonus = Math.floor(harmony * 0.1) + 100;
+            harmony += bonus;
+            goldenNote.style.display = 'none';
+            alert("GOLDEN NOTE! You earned " + bonus + " Harmony!");
+            updateDisplay();
+            saveGame();
         }
 
         function saveGame() {
@@ -145,17 +162,10 @@
         calculateHPS();
         updateDisplay();
 
-        // Game Loop
-        setInterval(() => {
-            if (hps > 0) {
-                harmony += hps / 10;
-                updateDisplay();
-                // Save less frequently to prevent lag
-            }
-        }, 100);
-
-        // Auto-save every 5 seconds
+        // Loops
+        setInterval(() => { harmony += hps / 10; updateDisplay(); }, 100);
         setInterval(saveGame, 5000);
+        setInterval(() => { if(Math.random() < 0.2) spawnGoldenNote(); }, 10000); // Try to spawn every 10s
     </script>
 </body>
 </html>
