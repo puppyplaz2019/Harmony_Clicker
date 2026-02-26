@@ -7,28 +7,36 @@
         body { margin: 0; background: #1a1a1a; color: white; font-family: 'Segoe UI', sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; }
         #game-container { display: flex; gap: 40px; background: #222; padding: 30px; border-radius: 20px; border: 2px solid #d4af37; box-shadow: 0 0 30px rgba(0,0,0,0.5); position: relative; }
         
+        /* Left Side: Clicking */
         #click-section { text-align: center; width: 300px; }
         #note-btn { font-size: 80px; background: none; border: none; cursor: pointer; transition: 0.1s; user-select: none; }
         #note-btn:active { transform: scale(0.9); }
         #harmony-display { font-size: 32px; color: #d4af37; font-weight: bold; margin: 20px 0; }
+        #hps-display { font-size: 18px; color: #bbb; }
+        #hpc-display { font-size: 14px; color: #00ffff; margin-top: 5px; }
         
+        /* Right Side: Upgrades */
         #upgrade-section { width: 300px; display: flex; flex-direction: column; gap: 10px; }
         .upgrade { background: #333; border: 1px solid #444; padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
         .upgrade:hover { background: #444; border-color: #d4af37; }
         .upgrade h4 { margin: 0; color: #00ffff; }
         .upgrade p { margin: 5px 0 0 0; font-size: 12px; color: #bbb; }
 
-        /* Golden Note Styling */
+        /* Golden Note */
         #golden-note { 
             position: absolute; font-size: 50px; cursor: pointer; display: none; 
             z-index: 100; filter: drop-shadow(0 0 15px gold); animation: pulse 1s infinite;
+            user-select: none;
         }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.2); } 100% { transform: scale(1); } }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.3); } 100% { transform: scale(1); } }
 
+        /* Buttons */
         #hub-trigger { position: absolute; bottom: 20px; right: 20px; background: #ff0000; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; border: none; }
-        #back-trigger { position: absolute; top: 20px; left: 20px; background: #444; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 14px; }
+        #back-trigger { position: absolute; top: 20px; left: 20px; background: #444; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 14px; border: 1px solid #666; }
+        
+        /* Modal */
         #modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #000; padding: 30px; border: 3px solid #d4af37; border-radius: 15px; text-align: center; display: none; z-index: 1000; }
-        .btn { display: block; width: 100%; padding: 12px; margin: 10px 0; font-weight: bold; text-decoration: none; border-radius: 5px; color: white; }
+        .btn { display: block; width: 100%; padding: 12px; margin: 10px 0; font-weight: bold; text-decoration: none; border-radius: 5px; color: white; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -41,7 +49,7 @@
             <div id="harmony-display">0 Harmony</div>
             <button id="note-btn">🎵</button>
             <p id="hps-display">0 Harmony / sec</p>
-            <p id="hpc-display" style="font-size: 12px; color: #d4af37;">+1 Per Click</p>
+            <p id="hpc-display">+1 Per Click</p>
         </div>
 
         <div id="upgrade-section">
@@ -71,24 +79,34 @@
         <p>Support the real pros:</p>
         <a class="btn" style="background:#ff0000;" href="https://www.youtube.com/@SancoOutdoors" target="_blank">🎬 SUB TO SANCO</a>
         <a class="btn" style="background:#d4af37; color:black;" href="https://www.sanangelogives.org/organization/emmanuelschooloffinearts" target="_blank">🎻 TIP THE SCHOOL</a>
-        <button onclick="hideModal()" style="background:none; border:none; color:#555; cursor:pointer; margin-top:10px;">[ BACK ]</button>
+        <button class="btn" style="background:#333;" onclick="resetSave()">⚠️ RESET PROGRESS</button>
+        <button onclick="hideModal()" style="background:none; border:none; color:#555; cursor:pointer; margin-top:10px;">[ BACK TO CLICKING ]</button>
     </div>
 
     <script>
-        let harmony = parseInt(localStorage.getItem('notes_collected') || 0);
-        let clickPower = parseInt(localStorage.getItem('click_power') || 1);
-        let clickCost = parseInt(localStorage.getItem('click_cost') || 25);
-        
-        // Use fixed price increases instead of multiplication
-        let upgrades = JSON.parse(localStorage.getItem('clicker_upgrades')) || [
+        // Default Stats
+        const defaultUpgrades = [
             { name: "Flute", cost: 15, power: 1, count: 0, increase: 10 },
             { name: "Trumpet", cost: 100, power: 5, count: 0, increase: 50 },
             { name: "Orchestra", cost: 500, power: 20, count: 0, increase: 200 }
         ];
 
+        // Load or Initialize
+        let harmony = parseInt(localStorage.getItem('notes_collected')) || 0;
+        let clickPower = parseInt(localStorage.getItem('click_power')) || 1;
+        let clickCost = parseInt(localStorage.getItem('click_cost')) || 25;
+        let upgrades = JSON.parse(localStorage.getItem('clicker_upgrades')) || defaultUpgrades;
+
+        // Data Fixer (Prevents NaN)
+        upgrades = upgrades.map((u, i) => {
+            if (isNaN(u.cost) || u.increase === undefined) return defaultUpgrades[i];
+            return u;
+        });
+
         let hps = 0;
         const goldenNote = document.getElementById('golden-note');
 
+        // Clicking Logic
         document.getElementById('note-btn').onclick = () => {
             harmony += clickPower;
             updateDisplay();
@@ -98,7 +116,7 @@
             if (harmony >= clickCost) {
                 harmony -= clickCost;
                 clickPower++;
-                clickCost += 25; // Simple flat increase
+                clickCost += 25; 
                 updateDisplay();
                 saveGame();
             }
@@ -108,7 +126,7 @@
             if (harmony >= upgrades[idx].cost) {
                 harmony -= upgrades[idx].cost;
                 upgrades[idx].count++;
-                upgrades[idx].cost += upgrades[idx].increase; // Simple flat increase
+                upgrades[idx].cost += upgrades[idx].increase; 
                 calculateHPS();
                 updateDisplay();
                 saveGame();
@@ -140,12 +158,12 @@
         }
 
         function hitGoldenNote() {
-            const bonus = Math.floor(harmony * 0.1) + 100;
+            const bonus = Math.floor(harmony * 0.15) + 100;
             harmony += bonus;
             goldenNote.style.display = 'none';
-            alert("GOLDEN NOTE! You earned " + bonus + " Harmony!");
             updateDisplay();
             saveGame();
+            alert("✨ GOLDEN NOTE! ✨\nYou just earned " + bonus + " Harmony!");
         }
 
         function saveGame() {
@@ -155,6 +173,15 @@
             localStorage.setItem('clicker_upgrades', JSON.stringify(upgrades));
         }
 
+        function resetSave() {
+            if(confirm("Are you sure? This resets everything but your Harmony count!")) {
+                localStorage.removeItem('click_power');
+                localStorage.removeItem('click_cost');
+                localStorage.removeItem('clicker_upgrades');
+                location.reload();
+            }
+        }
+
         function showModal() { document.getElementById('modal').style.display = 'block'; }
         function hideModal() { document.getElementById('modal').style.display = 'none'; }
 
@@ -162,10 +189,16 @@
         calculateHPS();
         updateDisplay();
 
-        // Loops
-        setInterval(() => { harmony += hps / 10; updateDisplay(); }, 100);
+        // Game Loops
+        setInterval(() => { 
+            if (hps > 0) {
+                harmony += hps / 10; 
+                updateDisplay(); 
+            }
+        }, 100);
+        
         setInterval(saveGame, 5000);
-        setInterval(() => { if(Math.random() < 0.2) spawnGoldenNote(); }, 10000); // Try to spawn every 10s
+        setInterval(() => { if(Math.random() < 0.3) spawnGoldenNote(); }, 15000);
     </script>
 </body>
 </html>
