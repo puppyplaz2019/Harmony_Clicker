@@ -14,15 +14,16 @@
         #harmony-display { font-size: 32px; color: #d4af37; font-weight: bold; margin: 20px 0; }
         
         /* Right Side: Upgrades */
-        #upgrade-section { width: 300px; display: flex; flex-direction: column; gap: 10px; }
+        #upgrade-section { width: 300px; display: flex; flex-direction: column; gap: 10px; max-height: 400px; overflow-y: auto; padding-right: 5px; }
         .upgrade { background: #333; border: 1px solid #444; padding: 10px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
         .upgrade:hover { background: #444; border-color: #d4af37; }
-        .upgrade.locked { opacity: 0.5; cursor: not-allowed; }
+        .upgrade.disabled { opacity: 0.5; cursor: not-allowed; }
         .upgrade h4 { margin: 0; color: #00ffff; }
         .upgrade p { margin: 5px 0 0 0; font-size: 12px; color: #bbb; }
 
         /* Sponsor Hub Button */
         #hub-trigger { position: absolute; bottom: 20px; right: 20px; background: #ff0000; color: white; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; border: none; }
+        #back-trigger { position: absolute; top: 20px; left: 20px; background: #444; color: white; padding: 8px 15px; border-radius: 5px; text-decoration: none; font-size: 14px; }
         
         #modal { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #000; padding: 30px; border: 3px solid #d4af37; border-radius: 15px; text-align: center; display: none; z-index: 100; }
         .btn { display: block; width: 100%; padding: 12px; margin: 10px 0; font-weight: bold; text-decoration: none; border-radius: 5px; color: white; }
@@ -30,15 +31,22 @@
 </head>
 <body>
 
+    <a id="back-trigger" href="https://puppyplaz2019.github.io/Arcade-HUB/">← BACK TO HUB</a>
+
     <div id="game-container">
         <div id="click-section">
             <div id="harmony-display">0 Harmony</div>
             <button id="note-btn">🎵</button>
-            <p style="color: #888;">Click the note to create music!</p>
+            <p style="color: #888;">Create music to earn Notes!</p>
             <p id="hps-display">0 Harmony / sec</p>
+            <p id="hpc-display" style="font-size: 12px; color: #d4af37;">+1 Per Click</p>
         </div>
 
         <div id="upgrade-section">
+            <div class="upgrade" onclick="buyClickUpgrade()">
+                <h4>Sharper Tuning</h4>
+                <p>Cost: <span id="click-cost">25</span> | +1 Per Click</p>
+            </div>
             <div class="upgrade" onclick="buyUpgrade(0)">
                 <h4>Flute Player</h4>
                 <p>Cost: <span id="cost0">15</span> | +1 Harmony/sec</p>
@@ -65,22 +73,38 @@
     </div>
 
     <script>
-        let harmony = 0;
-        let hps = 0;
-        let upgrades = [
+        // Use the same key as the Garden Game
+        let harmony = parseInt(localStorage.getItem('notes_collected') || 0);
+        let clickPower = parseInt(localStorage.getItem('click_power') || 1);
+        let clickCost = parseInt(localStorage.getItem('click_cost') || 25);
+        
+        let upgrades = JSON.parse(localStorage.getItem('clicker_upgrades')) || [
             { name: "Flute", cost: 15, power: 1, count: 0 },
             { name: "Trumpet", cost: 100, power: 5, count: 0 },
             { name: "Orchestra", cost: 500, power: 20, count: 0 }
         ];
 
+        let hps = 0;
         const noteBtn = document.getElementById('note-btn');
         const harmonyDisplay = document.getElementById('harmony-display');
         const hpsDisplay = document.getElementById('hps-display');
+        const hpcDisplay = document.getElementById('hpc-display');
 
         noteBtn.onclick = () => {
-            harmony++;
+            harmony += clickPower;
             updateDisplay();
+            saveGame();
         };
+
+        function buyClickUpgrade() {
+            if (harmony >= clickCost) {
+                harmony -= clickCost;
+                clickPower++;
+                clickCost = Math.floor(clickCost * 1.5);
+                updateDisplay();
+                saveGame();
+            }
+        }
 
         function buyUpgrade(idx) {
             if (harmony >= upgrades[idx].cost) {
@@ -89,6 +113,7 @@
                 upgrades[idx].cost = Math.floor(upgrades[idx].cost * 1.15);
                 calculateHPS();
                 updateDisplay();
+                saveGame();
             }
         }
 
@@ -99,18 +124,38 @@
 
         function updateDisplay() {
             harmonyDisplay.innerText = `${Math.floor(harmony)} Harmony`;
+            hpcDisplay.innerText = `+${clickPower} Per Click`;
+            document.getElementById('click-cost').innerText = clickCost;
             document.getElementById('cost0').innerText = upgrades[0].cost;
             document.getElementById('cost1').innerText = upgrades[1].cost;
             document.getElementById('cost2').innerText = upgrades[2].cost;
         }
 
+        function saveGame() {
+            localStorage.setItem('notes_collected', Math.floor(harmony));
+            localStorage.setItem('click_power', clickPower);
+            localStorage.setItem('click_cost', clickCost);
+            localStorage.setItem('clicker_upgrades', JSON.stringify(upgrades));
+        }
+
         function showModal() { document.getElementById('modal').style.display = 'block'; }
         function hideModal() { document.getElementById('modal').style.display = 'none'; }
 
+        // Start Up
+        calculateHPS();
+        updateDisplay();
+
+        // Game Loop
         setInterval(() => {
-            harmony += hps / 10;
-            updateDisplay();
+            if (hps > 0) {
+                harmony += hps / 10;
+                updateDisplay();
+                // Save less frequently to prevent lag
+            }
         }, 100);
+
+        // Auto-save every 5 seconds
+        setInterval(saveGame, 5000);
     </script>
 </body>
 </html>
